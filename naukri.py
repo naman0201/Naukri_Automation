@@ -153,7 +153,6 @@ def naukriLogin(headless=False):
 
             if WaitTillElementPresent(driver, skip_locator, "XPATH", 10):
                 GetElement(driver, skip_locator, "XPATH").click()
-
             if WaitTillElementPresent(driver, "ff-inventory", locator="ID", timeout=40):
                 log_msg("Naukri Login Successful")
                 status = True
