@@ -241,7 +241,7 @@ def naukriLogin():
             password_field.clear()
             password_field.send_keys(password)
             time.sleep(1)
-            
+            driver.save_screenshot("login_credential.png")
             # Use the known working login button XPath
             login_button = GetElement(driver, "//*[@type='submit' and normalize-space()='Login']", locator="XPATH")
             
