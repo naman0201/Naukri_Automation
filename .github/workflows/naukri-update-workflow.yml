@@ -35,36 +35,36 @@ jobs:
                     pip install selenium webdriver-manager pypdf reportlab
                   fi
 
-            # - name: Update config file with credentials
+            - name: Update config file with credentials
 
-            #   run: |
-            #       # Read existing config file
-            #       python -c "
-            #       import json
-            #       import os
+              run: |
+                  # Read existing config file
+                  python -c "
+                  import json
+                  import os
 
-            #       # Load existing config
-            #       with open('config.json', 'r') as f:
-            #           config = json.load(f)
+                  # Load existing config
+                  with open('config.json', 'r') as f:
+                      config = json.load(f)
 
-            #       # Update credentials
-            #       if 'Credentials' not in config:
-            #           config['Credentials'] = {}
-            #       config['Credentials']['username'] = os.environ['NAUKRI_USERNAME']
-            #       config['Credentials']['password'] = os.environ['NAUKRI_PASSWORD']
+                  # Update credentials
+                  if 'Credentials' not in config:
+                      config['Credentials'] = {}
+                  config['Credentials']['username'] = os.environ['NAUKRI_USERNAME']
+                  config['Credentials']['password'] = os.environ['NAUKRI_PASSWORD']
 
-            #       # Update resume path to use the one in the repository
-            #       if 'Paths' not in config:
-            #           config['Paths'] = {}
-            #       config['Paths']['originalResumePath'] = os.path.join(os.environ['GITHUB_WORKSPACE'], 'NamanTiwari_Resume.pdf')
+                  # Update resume path to use the one in the repository
+                  if 'Paths' not in config:
+                      config['Paths'] = {}
+                  config['Paths']['originalResumePath'] = os.path.join(os.environ['GITHUB_WORKSPACE'], 'NamanTiwari_Resume.pdf')
 
-            #       # Write updated config
-            #       with open('config.json', 'w') as f:
-            #           json.dump(config, f, indent=2)
-            #       "
-            #   env:
-            #       NAUKRI_USERNAME: ${{ secrets.NAUKRI_USERNAME }}
-            #       NAUKRI_PASSWORD: ${{ secrets.NAUKRI_PASSWORD }}
+                  # Write updated config
+                  with open('config.json', 'w') as f:
+                      json.dump(config, f, indent=2)
+                  "
+              env:
+                  NAUKRI_USERNAME: ${{ secrets.NAUKRI_USERNAME }}
+                  NAUKRI_PASSWORD: ${{ secrets.NAUKRI_PASSWORD }}
 
             - name: Run Naukri update script
               run: |

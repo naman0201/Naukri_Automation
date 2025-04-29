@@ -254,6 +254,7 @@ def naukriLogin():
                 
                 # Simplified check for successful login - just check if we're on a profile/home page
                 current_url = driver.current_url
+                log_msg(f"Current URL after login: {current_url}")
                 if "mnjuser" in current_url or "myprofile" in current_url or "home" in current_url:
                     log_msg("Naukri Login Successful")
                     driver.save_screenshot("dashboard.png")
