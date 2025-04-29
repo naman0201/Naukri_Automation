@@ -76,9 +76,6 @@ jobs:
               if: always()
               uses: actions/upload-artifact@v4
               with:
-                name: selenium-screenshots
-                path: |
-                *.png
-                *.html
-                naukri.log
-                # Adjust as needed
+                  name: selenium-screenshots
+                  path: |
+                  *.png
