@@ -331,7 +331,8 @@ def naukriLogin():
                     login_button.click()
                 except:
                     # Try JavaScript click if direct click fails
-                    driver.execute_script("arguments[0].click();", login_button)
+                    log_msg("Direct click failed, trying JavaScript click...")
+                    driver.execute_script("arguments[1].click();", login_button)
                 log_msg("Login form submitted")
                 
                 # Wait for page to load after login
