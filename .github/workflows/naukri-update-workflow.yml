@@ -73,9 +73,12 @@ jobs:
               env:
                   PYTHONUNBUFFERED: 1
             - name: Upload screenshots
-              uses: actions/upload-artifact@v3
-              if: always() # This ensures screenshots are uploaded even if the script fails
+              if: always()
+              uses: actions/upload-artifact@v4
               with:
-                  name: screenshots
-                  path: "*.png"
-                  retention-days: 5 # Adjust as needed
+                name: selenium-screenshots
+                path: |
+                *.png
+                *.html
+                naukri.log
+                # Adjust as needed
