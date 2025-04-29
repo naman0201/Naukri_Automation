@@ -31,7 +31,7 @@ LWD_MONTH = future_date.strftime("%b")  # Three-letter format
 LWD_YEAR = future_date.strftime("%Y")
 
 # If Headless = True, script runs Chrome in headless mode without visible GUI
-headless = False
+headless = True
 
 # Set login URL
 NaukriURL = "https://www.naukri.com/nlogin/login"
