@@ -3,7 +3,7 @@ name: Naukri Daily Update
 on:
     schedule:
         # Run daily at 9:00 AM UTC (adjust timing as needed)
-        - cron: "45 9 * * *"
+        - cron: "0 9 * * *"
     workflow_dispatch: # Allows manual triggering from GitHub UI
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
                   if [ -f requirements.txt ]; then
                     pip install -r requirements.txt
                   else
-                    pip install reportlab==4.3.1 webdriver_manager==4.0.2 selenium==4.29.0 pypdf>=3.9.0
+                    pip install selenium webdriver-manager pypdf reportlab
                   fi
 
             - name: Update config file with credentials
@@ -72,3 +72,10 @@ jobs:
                   python naukri.py
               env:
                   PYTHONUNBUFFERED: 1
+            - name: Upload screenshots
+              uses: actions/upload-artifact@v3
+              if: always() # This ensures screenshots are uploaded even if the script fails
+              with:
+                  name: screenshots
+                  path: "*.png"
+                  retention-days: 5 # Adjust as needed
