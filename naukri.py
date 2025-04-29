@@ -239,10 +239,10 @@ def naukriLogin():
     ]
     
     login_btn_identifiers = [
-        {"type": "XPATH", "value": "//*[@type='submit' and normalize-space()='Login']"},
-        {"type": "XPATH", "value": "//button[contains(text(), 'Login')]"},
-        {"type": "XPATH", "value": "//button[@type='submit']"},
-        {"type": "XPATH", "value": "//input[@type='submit']"}
+    {
+        "type": "XPATH",
+        "value": "//button[@type='submit' and @data-ga-track='spa-event|login|login|Save||||true']"
+    }
     ]
     
     skip_identifiers = [
@@ -336,12 +336,6 @@ def naukriLogin():
                 
                 # Wait for page to load after login
                 time.sleep(5)
-                
-                # Check for CAPTCHA
-                if check_captcha(driver):
-                    log_msg("CAPTCHA detected during login")
-                    driver.save_screenshot("login_captcha.png")
-                    return False, driver
                 
                 # Check for SKIP button after login attempt
                 for identifier in skip_identifiers:
