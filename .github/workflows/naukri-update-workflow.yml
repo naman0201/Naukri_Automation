@@ -1,0 +1,74 @@
+name: Naukri Daily Update
+
+on:
+    schedule:
+        # Run daily at 9:00 AM UTC (adjust timing as needed)
+        - cron: "45 9 * * *"
+    workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+    update-naukri-profile:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
+
+            - name: Install Chrome
+              run: |
+                  wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+                  echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+                  sudo apt-get update
+                  sudo apt-get install -y google-chrome-stable
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  if [ -f requirements.txt ]; then
+                    pip install -r requirements.txt
+                  else
+                    pip install reportlab==4.3.1 webdriver_manager==4.0.2 selenium==4.29.0 pypdf>=3.9.0
+                  fi
+
+            - name: Update config file with credentials
+              run: |
+                  # Read existing config file
+                  python -c "
+                  import json
+                  import os
+
+                  # Load existing config
+                  with open('config.json', 'r') as f:
+                      config = json.load(f)
+
+                  # Update credentials
+                  if 'Credentials' not in config:
+                      config['Credentials'] = {}
+                  config['Credentials']['username'] = os.environ['NAUKRI_USERNAME']
+                  config['Credentials']['password'] = os.environ['NAUKRI_PASSWORD']
+
+                  # Update resume path to use the one in the repository
+                  if 'Paths' not in config:
+                      config['Paths'] = {}
+                  config['Paths']['originalResumePath'] = os.path.join(os.environ['GITHUB_WORKSPACE'], 'NamanTiwari_Resume.pdf')
+
+                  # Write updated config
+                  with open('config.json', 'w') as f:
+                      json.dump(config, f, indent=2)
+                  "
+              env:
+                  NAUKRI_USERNAME: ${{ secrets.NAUKRI_USERNAME }}
+                  NAUKRI_PASSWORD: ${{ secrets.NAUKRI_PASSWORD }}
+
+            - name: Run Naukri update script
+              run: |
+                  # Modify the script to work in headless mode (GitHub Actions has no GUI)
+                  sed -i 's/headless = False/headless = True/g' naukri.py
+                  python naukri.py
+              env:
+                  PYTHONUNBUFFERED: 1

@@ -1,9 +1,9 @@
 {
     "Credentials": {
-      "username": "username",
-      "password": "password"
+        "username": "placeholder_email",
+        "password": "placeholder_password"
     },
     "Paths": {
-      "originalResumePath": "F:\\My documents\\NamanTiwariResume.pdf"
+        "originalResumePath": "NamanTiwari_CombinedMar2025_Resume"
     }
-  }
+}
