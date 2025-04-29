@@ -224,43 +224,187 @@ def naukriLogin():
     status = False
     driver = None
     
+    # Multiple possible username/password field identifiers
+    username_identifiers = [
+        {"type": "ID", "value": "usernameField"},
+        {"type": "NAME", "value": "email"},
+        {"type": "XPATH", "value": "//input[@type='text' and contains(@placeholder, 'Email')]"},
+        {"type": "XPATH", "value": "//input[@type='email']"}
+    ]
+    
+    password_identifiers = [
+        {"type": "ID", "value": "passwordField"},
+        {"type": "NAME", "value": "password"},
+        {"type": "XPATH", "value": "//input[@type='password']"}
+    ]
+    
+    login_btn_identifiers = [
+        {"type": "XPATH", "value": "//*[@type='submit' and normalize-space()='Login']"},
+        {"type": "XPATH", "value": "//button[contains(text(), 'Login')]"},
+        {"type": "XPATH", "value": "//button[@type='submit']"},
+        {"type": "XPATH", "value": "//input[@type='submit']"}
+    ]
+    
+    skip_identifiers = [
+        {"type": "XPATH", "value": "//*[text() = 'SKIP AND CONTINUE']"},
+        {"type": "XPATH", "value": "//*[contains(text(), 'Skip')]"},
+        {"type": "XPATH", "value": "//*[contains(@class, 'skip')]"}
+    ]
+    
+    success_identifiers = [
+        {"type": "ID", "value": "ff-inventory"},
+        {"type": "XPATH", "value": "//*[contains(@class, 'userName')]"},
+        {"type": "XPATH", "value": "//*[contains(@class, 'profile')]"},
+        {"type": "XPATH", "value": "//*[contains(text(), 'My Naukri')]"}
+    ]
+
     try:
         driver = LoadNaukri()
         
-        # Use the known working identifiers directly
-        username_field = GetElement(driver, "usernameField", locator="ID")
-        password_field = GetElement(driver, "passwordField", locator="ID")
+        # Debug page info
+        log_msg(f"Page Title: {driver.title}")
+        with open("page_source.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        
+        # Debug screenshot
+        driver.save_screenshot("before_login.png")
+        
+        # Find username field
+        username_field = None
+        for identifier in username_identifiers:
+            try:
+                if is_element_present(driver, getObj(identifier["type"]), identifier["value"]):
+                    log_msg(f"Found username field using {identifier['type']}: {identifier['value']}")
+                    username_field = GetElement(driver, identifier["value"], locator=identifier["type"])
+                    if username_field:
+                        break
+            except:
+                continue
+        
+        # Find password field
+        password_field = None
+        for identifier in password_identifiers:
+            try:
+                if is_element_present(driver, getObj(identifier["type"]), identifier["value"]):
+                    log_msg(f"Found password field using {identifier['type']}: {identifier['value']}")
+                    password_field = GetElement(driver, identifier["value"], locator=identifier["type"])
+                    if password_field:
+                        break
+            except:
+                continue
         
         if username_field and password_field:
             log_msg("Login form found, entering credentials...")
             
-            username_field.clear()
-            username_field.send_keys(username)
+            # Try JavaScript method if direct method fails
+            try:
+                username_field.clear()
+                username_field.send_keys(username)
+            except:
+                driver.execute_script(f"arguments[0].value = '{username}';", username_field)
             time.sleep(1)
             
-            password_field.clear()
-            password_field.send_keys(password)
+            try:
+                password_field.clear()
+                password_field.send_keys(password)
+            except:
+                driver.execute_script(f"arguments[0].value = '{password}';", password_field)
             time.sleep(1)
-            driver.save_screenshot("login_credential.png")
-            # Use the known working login button XPath
-            login_button = GetElement(driver, "//*[@type='submit' and normalize-space()='Login']", locator="XPATH")
+            
+            # Take screenshot before clicking login
+            driver.save_screenshot("filled_login_form.png")
+            
+            # Find login button
+            login_button = None
+            for identifier in login_btn_identifiers:
+                try:
+                    if is_element_present(driver, getObj(identifier["type"]), identifier["value"]):
+                        log_msg(f"Found login button using {identifier['type']}: {identifier['value']}")
+                        login_button = GetElement(driver, identifier["value"], locator=identifier["type"])
+                        if login_button:
+                            break
+                except:
+                    continue
             
             if login_button:
-                login_button.click()
+                try:
+                    login_button.click()
+                except:
+                    # Try JavaScript click if direct click fails
+                    driver.execute_script("arguments[0].click();", login_button)
                 log_msg("Login form submitted")
                 
                 # Wait for page to load after login
                 time.sleep(5)
                 
-                # Simplified check for successful login - just check if we're on a profile/home page
-                current_url = driver.current_url
-                log_msg(f"Current URL after login: {current_url}")
-                if "mnjuser" in current_url or "myprofile" in current_url or "home" in current_url:
+                # Check for CAPTCHA
+                if check_captcha(driver):
+                    log_msg("CAPTCHA detected during login")
+                    driver.save_screenshot("login_captcha.png")
+                    return False, driver
+                
+                # Check for SKIP button after login attempt
+                for identifier in skip_identifiers:
+                    try:
+                        if WaitTillElementPresent(driver, identifier["value"], identifier["type"], 10):
+                            skip_button = GetElement(driver, identifier["value"], identifier["type"])
+                            if skip_button:
+                                try:
+                                    skip_button.click()
+                                except:
+                                    driver.execute_script("arguments[0].click();", skip_button)
+                                log_msg("Skipped post-login dialog")
+                                time.sleep(2)
+                                break
+                    except:
+                        continue
+                
+                # Take screenshot after login attempt
+                driver.save_screenshot("after_login.png")
+                
+                # Check if cookies need to be accepted
+                try:
+                    cookie_buttons = driver.find_elements(By.XPATH, "//*[contains(text(), 'Accept') or contains(text(), 'Allow') or contains(text(), 'Cookie')]")
+                    if cookie_buttons:
+                        for button in cookie_buttons:
+                            try:
+                                button.click()
+                                log_msg("Clicked cookie consent button")
+                                time.sleep(1)
+                            except:
+                                continue
+                except:
+                    pass
+                
+                # Verify successful login by checking for profile elements
+                login_success = False
+                for identifier in success_identifiers:
+                    try:
+                        if WaitTillElementPresent(driver, identifier["value"], identifier["type"], 5):
+                            login_success = True
+                            log_msg(f"Login successful - found element using {identifier['type']}: {identifier['value']}")
+                            break
+                    except:
+                        continue
+                
+                if login_success:
                     log_msg("Naukri Login Successful")
                     driver.save_screenshot("dashboard.png")
                     status = True
+                    return status, driver
                 else:
-                    log_msg("Login unsuccessful - check credentials")
+                    # Try checking URL as a fallback
+                    current_url = driver.current_url
+                    log_msg(f"Current URL after login: {current_url}")
+                    
+                    if "mnjuser" in current_url or "myprofile" in current_url or "home" in current_url:
+                        log_msg("Login appears successful based on URL")
+                        driver.save_screenshot("dashboard_url_check.png")
+                        status = True
+                        return status, driver
+                    else:
+                        log_msg("Login appears unsuccessful - dashboard elements not found")
+                        driver.save_screenshot("login_failed.png")
             else:
                 log_msg("Login button not found")
         else:
@@ -268,9 +412,10 @@ def naukriLogin():
             
     except Exception as e:
         catch(e)
-        
+        if driver:
+            driver.save_screenshot("login_error.png")
+            
     return status, driver
-
 
 def upload_resume(driver, resume_path):
     """Uploads a resume file to Naukri.com"""
