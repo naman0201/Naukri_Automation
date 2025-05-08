@@ -1,5 +1,3 @@
-#! python3
-# -*- coding: utf-8 -*-
 """Naukri Daily update - Using Chrome (Headless-friendly)"""
 import json
 import logging
@@ -15,6 +13,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager as CM
+from selenium.webdriver.support.ui import Select
 
 # Configure logging first
 logging.basicConfig(
@@ -53,7 +52,7 @@ except KeyError as e:
 
 # Calculate Last Working Date (3 months from today)
 future_date = datetime.today() + timedelta(days=90)
-LWD_DAY = future_date.strftime("%d")
+LWD_DAY = future_date.day
 LWD_MONTH = future_date.strftime("%b")  # Three-letter format
 LWD_YEAR = future_date.strftime("%Y")
 
@@ -223,193 +222,29 @@ def naukriLogin():
     """Login to Naukri.com"""
     status = False
     driver = None
-    
-    # Multiple possible username/password field identifiers
-    username_identifiers = [
-        {"type": "ID", "value": "usernameField"},
-        {"type": "NAME", "value": "email"},
-        {"type": "XPATH", "value": "//input[@type='text' and contains(@placeholder, 'Email')]"},
-        {"type": "XPATH", "value": "//input[@type='email']"}
-    ]
-    
-    password_identifiers = [
-        {"type": "ID", "value": "passwordField"},
-        {"type": "NAME", "value": "password"},
-        {"type": "XPATH", "value": "//input[@type='password']"}
-    ]
-    
-    login_btn_identifiers = [
-    {
-        "type": "XPATH",
-        "value": "//button[@type='submit' and @data-ga-track='spa-event|login|login|Save||||true']"
-    }
-    ]
-    
-    skip_identifiers = [
-        {"type": "XPATH", "value": "//*[text() = 'SKIP AND CONTINUE']"},
-        {"type": "XPATH", "value": "//*[contains(text(), 'Skip')]"},
-        {"type": "XPATH", "value": "//*[contains(@class, 'skip')]"}
-    ]
-    
-    success_identifiers = [
-        {"type": "ID", "value": "ff-inventory"},
-        {"type": "XPATH", "value": "//*[contains(@class, 'userName')]"},
-        {"type": "XPATH", "value": "//*[contains(@class, 'profile')]"},
-        {"type": "XPATH", "value": "//*[contains(text(), 'My Naukri')]"}
-    ]
+    username_locator = "usernameField"
+    password_locator = "passwordField"
+    login_btn_locator = "//*[@type='submit' and normalize-space()='Login']"
+    skip_locator = "//*[text() = 'SKIP AND CONTINUE']"
 
     try:
         driver = LoadNaukri()
-        
-        # Debug page info
-        log_msg(f"Page Title: {driver.title}")
-        with open("page_source.html", "w", encoding="utf-8") as f:
-            f.write(driver.page_source)
-        
-        # Debug screenshot
-        driver.save_screenshot("before_login.png")
-        
-        # Find username field
-        username_field = None
-        for identifier in username_identifiers:
-            try:
-                if is_element_present(driver, getObj(identifier["type"]), identifier["value"]):
-                    log_msg(f"Found username field using {identifier['type']}: {identifier['value']}")
-                    username_field = GetElement(driver, identifier["value"], locator=identifier["type"])
-                    if username_field:
-                        break
-            except:
-                continue
-        
-        # Find password field
-        password_field = None
-        for identifier in password_identifiers:
-            try:
-                if is_element_present(driver, getObj(identifier["type"]), identifier["value"]):
-                    log_msg(f"Found password field using {identifier['type']}: {identifier['value']}")
-                    password_field = GetElement(driver, identifier["value"], locator=identifier["type"])
-                    if password_field:
-                        break
-            except:
-                continue
-        
-        if username_field and password_field:
-            log_msg("Login form found, entering credentials...")
-            
-            # Try JavaScript method if direct method fails
-            try:
-                username_field.clear()
-                username_field.send_keys(username)
-            except:
-                driver.execute_script(f"arguments[0].value = '{username}';", username_field)
-            time.sleep(1)
-            
-            try:
-                password_field.clear()
-                password_field.send_keys(password)
-            except:
-                driver.execute_script(f"arguments[0].value = '{password}';", password_field)
-            time.sleep(1)
-            
-            # Take screenshot before clicking login
-            driver.save_screenshot("filled_login_form.png")
-            
-            # Find login button
-            login_button = None
-            for identifier in login_btn_identifiers:
-                try:
-                    if is_element_present(driver, getObj(identifier["type"]), identifier["value"]):
-                        log_msg(f"Found login button using {identifier['type']}: {identifier['value']}")
-                        login_button = GetElement(driver, identifier["value"], locator=identifier["type"])
-                        if login_button:
-                            break
-                except:
-                    continue
-            
-            if login_button:
-                try:
-                    login_button.click()
-                except:
-                    # Try JavaScript click if direct click fails
-                    log_msg("Direct click failed, trying JavaScript click...")
-                    driver.execute_script("arguments[1].click();", login_button)
-                log_msg("Login form submitted")
-                
-                # Wait for page to load after login
-                time.sleep(5)
-                
-                # Check for SKIP button after login attempt
-                for identifier in skip_identifiers:
-                    try:
-                        if WaitTillElementPresent(driver, identifier["value"], identifier["type"], 10):
-                            skip_button = GetElement(driver, identifier["value"], identifier["type"])
-                            if skip_button:
-                                try:
-                                    skip_button.click()
-                                except:
-                                    driver.execute_script("arguments[0].click();", skip_button)
-                                log_msg("Skipped post-login dialog")
-                                time.sleep(2)
-                                break
-                    except:
-                        continue
-                
-                # Take screenshot after login attempt
-                driver.save_screenshot("after_login.png")
-                
-                # Check if cookies need to be accepted
-                try:
-                    cookie_buttons = driver.find_elements(By.XPATH, "//*[contains(text(), 'Accept') or contains(text(), 'Allow') or contains(text(), 'Cookie')]")
-                    if cookie_buttons:
-                        for button in cookie_buttons:
-                            try:
-                                button.click()
-                                log_msg("Clicked cookie consent button")
-                                time.sleep(1)
-                            except:
-                                continue
-                except:
-                    pass
-                
-                # Verify successful login by checking for profile elements
-                login_success = False
-                for identifier in success_identifiers:
-                    try:
-                        if WaitTillElementPresent(driver, identifier["value"], identifier["type"], 5):
-                            login_success = True
-                            log_msg(f"Login successful - found element using {identifier['type']}: {identifier['value']}")
-                            break
-                    except:
-                        continue
-                
-                if login_success:
-                    log_msg("Naukri Login Successful")
-                    driver.save_screenshot("dashboard.png")
-                    status = True
-                    return status, driver
-                else:
-                    # Try checking URL as a fallback
-                    current_url = driver.current_url
-                    log_msg(f"Current URL after login: {current_url}")
-                    
-                    if "mnjuser" in current_url or "myprofile" in current_url or "home" in current_url:
-                        log_msg("Login appears successful based on URL")
-                        driver.save_screenshot("dashboard_url_check.png")
-                        status = True
-                        return status, driver
-                    else:
-                        log_msg("Login appears unsuccessful - dashboard elements not found")
-                        driver.save_screenshot("login_failed.png")
-            else:
-                log_msg("Login button not found")
-        else:
-            log_msg("Could not find username or password fields")
-            
+
+        if is_element_present(driver, By.ID, username_locator):
+            GetElement(driver, username_locator, locator="ID").send_keys(username)
+            GetElement(driver, password_locator, locator="ID").send_keys(password)
+            GetElement(driver, login_btn_locator, locator="XPATH").send_keys(Keys.ENTER)
+
+            if WaitTillElementPresent(driver, skip_locator, "XPATH", 10):
+                GetElement(driver, skip_locator, "XPATH").click()
+
+            if WaitTillElementPresent(driver, "ff-inventory", locator="ID", timeout=40):
+                log_msg("Naukri Login Successful")
+                status = True
+                return status, driver
+
     except Exception as e:
         catch(e)
-        if driver:
-            driver.save_screenshot("login_error.png")
-            
     return status, driver
 
 def upload_resume(driver, resume_path):
@@ -492,54 +327,53 @@ def upload_resume(driver, resume_path):
     return False
 
 
+
 def UpdateLastWorkingDate(driver, day, month, year):
     """Updates Last Working Date in Naukri profile"""
     try:
         log_msg(f"Updating Last Working Date to {day}-{month}-{year}...")
-        
-        # Navigate to profile page first
-        driver.get("https://www.naukri.com/mnjuser/profile")
-        time.sleep(3)
 
-        # Use the known working edit button locator
+        # Locators
         edit_locator = "(//*[contains(@class, 'icon edit')])[1]"
-        
-        if WaitTillElementPresent(driver, edit_locator, "XPATH", 10):
-            edit_button = GetElement(driver, edit_locator, locator="XPATH")
-            if edit_button:
-                edit_button.click()
-                log_msg("Edit button clicked")
-                time.sleep(2)
-                
-                # Use the known working field IDs
-                day_input = GetElement(driver, "lwdDayFor", "ID")
-                month_input = GetElement(driver, "lwdMonthFor", "ID")
-                year_input = GetElement(driver, "lwdYearFor", "ID")
+        save_confirm = "//*[text()='today' or text()='Today'] | //*[@class='success-msg']"
 
-                # Fill in date fields
-                for input_field, value in [(day_input, day), (month_input, month), (year_input, year)]:
-                    if input_field:
-                        input_field.clear()
-                        input_field.send_keys(value)
-                        input_field.send_keys(Keys.ENTER)
-                        time.sleep(1)
-                
-                # Use the known working save button
-                save_xpath = "//button[@type='submit'][@value='Save Changes'] | //*[@id='saveBasicDetailsBtn']"
-                save_button = GetElement(driver, save_xpath, locator="XPATH")
-                if save_button:
-                    save_button.click()
-                    log_msg("Save button clicked")
-                    time.sleep(3)  # Wait for save to complete
-                    
-                    # No need to check for confirmation as testing confirms it works
-                    log_msg(f"Last Working Date successfully updated to {day}-{month}-{year}.")
-                else:
-                    log_msg("Save button not found")
-            else:
-                log_msg("Edit button not found")
+        if not WaitTillElementPresent(driver, edit_locator, "XPATH", 20):
+            log_msg("Edit icon not found.")
+            return
+
+        driver.execute_script("window.scrollTo(0, 0);")  # Scroll to top of page
+        time.sleep(1)
+        GetElement(driver, edit_locator, locator="XPATH").click()
+        time.sleep(2)  # Allow UI to transition
+
+        driver.execute_script("window.scrollBy(0, 500);")
+        driver.save_screenshot("before_lwd_update.png")
+        
+        # Fetching input fields
+        day_input = GetElement(driver, "lwdDayFor", "ID")
+        month_input = GetElement(driver, "lwdMonthFor", "ID")
+        year_input = GetElement(driver, "lwdYearFor", "ID")
+
+        if not all([day_input, month_input, year_input]):
+            log_msg("One or more date input fields not found.")
+            return
+
+        log_msg("Filling in Last Working Date fields...")
+
+        for input_field, value in [(day_input, day), (month_input, month), (year_input, year)]:
+            if input_field:
+                input_field.clear()
+                input_field.send_keys(value)
+                input_field.send_keys(Keys.ENTER)
+
+        save_btn_locator = "//*[@type='button' and normalize-space()='Save']"
+
+        GetElement(driver, save_btn_locator, locator="XPATH").send_keys(Keys.ENTER)
+        if WaitTillElementPresent(driver, save_confirm, "XPATH", 10):
+            log_msg(f"Last Working Date successfully updated to {day}-{month}-{year}.")
+            driver.save_screenshot("LWD_Updated.png")
         else:
-            log_msg("Edit button not present in profile")
+            log_msg("Save confirmation not detected. Update may have failed.")
 
     except Exception as e:
         catch(e)
